@@ -17,8 +17,12 @@ namespace MHANIC.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly NicDbContext _context;
-
+        //To Folder
         private readonly string _uploadsFolder = "C:\\FTP";
+        // To FTP server 
+        private readonly string ftpServer = "ftp://192.168.0.1/";
+        private readonly string ftpUsername = "admin";
+        private readonly string ftpPassword = "adP";
 
         private const string Username = "admin";
         private const string HashedPassword = "password";
@@ -32,6 +36,29 @@ namespace MHANIC.Controllers
         public IActionResult Login()
         {
             return View();
+        }
+        [HttpGet]
+        public IActionResult Delete(Int32? phoneNo)
+        {
+            if (phoneNo == null)
+            {
+                return NotFound();
+            }
+
+            var user = _context.UsersData.Find(phoneNo);
+
+            // Check if the user record exists
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            
+            _context.UsersData.Remove(user);
+            _context.SaveChanges(); 
+            TempData["Message"] = "User record deleted successfully!";
+            return RedirectToAction("Index"); 
+           
         }
 
         [HttpPost]
@@ -70,26 +97,13 @@ namespace MHANIC.Controllers
         {
             if (PhotoData != null && PhotoData.Length > 0)
             {
-                // Generate a random file name
                 var fileName = GenerateRandomFileName();
                 var extension = Path.GetExtension(PhotoData.FileName);
                 fileName = Path.ChangeExtension(fileName, extension);
-
-                // Combine the folder path and the file name
-                var filePath = Path.Combine(_uploadsFolder, fileName);
-
-                // Copy the uploaded file to the target location
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    PhotoData.CopyTo(stream);
-                }
-
-                // Save the file path in your database or use it as needed
-                userData.PhotoName = fileName; // Save just the file name, not the full path
+                UploadFileToFTP(PhotoData, fileName);
+                userData.PhotoName = fileName;
             }
 
-
-            // Save form data to PostgreSQL
             if (userData != null)
             {
                 _context.UsersData.Add(userData);
@@ -98,12 +112,21 @@ namespace MHANIC.Controllers
                 return RedirectToAction("Index");
             }
 
-
             return View(userData);
         }
 
+        public void UploadToFolder(string fileName, IFormFile PhotoData)
+        {
+            var filePath = Path.Combine(_uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                PhotoData.CopyTo(stream);
+            }
+        }
+
         [HttpGet]
-        public IActionResult GetPhoto(string fileName)
+        public IActionResult GetPhotoFromFolder(string fileName)
         {
             if(fileName == null)
             {
@@ -124,31 +147,52 @@ namespace MHANIC.Controllers
         [HttpGet]
         public IActionResult Search(Int32 phone)
         {
-
-            // Perform search operation using the searchTerm parameter
             var user = _context.UsersData.Find(phone);
-
-
 
             if (user == null)
             {
-                // If no results found, return a view with a message
+               
                 ViewBag.Message = "No results found.";
                 return RedirectToAction("Index");
             }
-
-            // If results found, pass them to the view
+         
             return View(user);
         }
+       
+        private void UploadFileToFTP(IFormFile photo,string fileName)
+        {
+         
+            string ftpFilePath = "/G/Shared/ftc/" + fileName;
 
+            FtpWebRequest ftpRequest = (FtpWebRequest)WebRequest.Create(ftpServer + ftpFilePath);
+            ftpRequest.Credentials = new NetworkCredential(ftpUsername, ftpPassword);
+            ftpRequest.Method = WebRequestMethods.Ftp.UploadFile;
+
+            try
+            {
+                using (Stream fileStream = photo.OpenReadStream())
+                using (Stream ftpStream = ftpRequest.GetRequestStream())
+                {
+                    fileStream.CopyTo(ftpStream);
+                }
+
+                Console.WriteLine("File uploaded successfully to FTP server.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error uploading file to FTP server: " + ex.Message);
+            }
+        }
+
+        [HttpGet]
         public IActionResult DownloadPhoto(string fileName)
         {
-            byte[] fileBytes = DownloadFileFromFTP(fileName);
+            byte[] fileBytes = DownloadFromFTP(fileName);
 
             if (fileBytes != null)
             {
-                // Return file as a file download
-                return File(fileBytes, "application/octet-stream", fileName);
+                // Return file as an image/jpeg file download
+                return File(fileBytes, "image/jpeg", fileName);
             }
             else
             {
@@ -157,39 +201,18 @@ namespace MHANIC.Controllers
             }
         }
 
-        private void UploadFileToFTP(IFormFile photo)
-        {
-
-            string randomFileName = Path.GetRandomFileName();
-            string fileExtension = Path.GetExtension(photo.FileName);
-            string ftpFileName = randomFileName + fileExtension;
-
-            string ftpServer = "ftp://192.168.0.1:21";
-            string ftpUsername = "admin";
-            string ftpPassword = "adP";
-
-            string ftpFilePath = "G/Shared/ftc/" + ftpFileName;
-
-            FtpWebRequest ftpRequest = (FtpWebRequest)WebRequest.Create(ftpServer + ftpFilePath);
-            ftpRequest.Credentials = new NetworkCredential(ftpUsername, ftpPassword);
-            ftpRequest.Method = WebRequestMethods.Ftp.UploadFile;
-
-            using (Stream fileStream = photo.OpenReadStream())
-            using (Stream ftpStream = ftpRequest.GetRequestStream())
-            {
-                fileStream.CopyTo(ftpStream);
-            }
-        }
-
-        private byte[] DownloadFileFromFTP(string fileName)
+        private byte[] DownloadFromFTP(string fileName)
         {
             byte[] fileBytes = null;
 
             try
             {
-                FtpWebRequest request = (FtpWebRequest)WebRequest.Create($"{"_ftpServer"}/{fileName}");
+            
+                string ftpFilePath = "/G/Shared/ftc/" + fileName;
+
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create(ftpServer + ftpFilePath);
                 request.Method = WebRequestMethods.Ftp.DownloadFile;
-                request.Credentials = new NetworkCredential("_ftpUsername", "_ftpPassword");
+                request.Credentials = new NetworkCredential(ftpUsername, ftpPassword);
 
                 using (FtpWebResponse response = (FtpWebResponse)request.GetResponse())
                 using (Stream responseStream = response.GetResponseStream())
@@ -207,18 +230,17 @@ namespace MHANIC.Controllers
                     using (StreamReader reader = new StreamReader(errorResponse))
                     {
                         string error = reader.ReadToEnd();
+                        Console.WriteLine("FTP Error: " + error);
                     }
                 }
             }
 
             return fileBytes;
         }
-
         public IActionResult Privacy()
         {
             return View();
         }
-
         private bool VerifyPassword(string password, string hashedPassword)
         {
             using (var sha512 = System.Security.Cryptography.SHA512.Create())
@@ -248,7 +270,6 @@ namespace MHANIC.Controllers
                 }
             }
         }
-
         private string GenerateCaptchaCode(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -260,7 +281,6 @@ namespace MHANIC.Controllers
             string storedCaptcha = HttpContext.Session.GetString("CaptchaCode");
             return string.Equals(enteredCaptcha, storedCaptcha, StringComparison.OrdinalIgnoreCase);
         }
-
         private string GenerateRandomFileName()
         {
             // Generate a random 16-digit string

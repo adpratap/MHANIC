@@ -14,8 +14,8 @@
             <h2>Email ID: @Model.Email_Id</h2>
             <h2>Address: @Model.Address</h2>
             <h2>Photo:</h2>
-            <img src="@Url.Action("GetPhoto", "Home", new { fileName = @Model.PhotoName })" alt="User Photo" />
-            <p><a asp-controller="Home" asp-action="GetPhoto" asp-route-fileName="@Model.PhotoName">@Model.PhotoName</a></p>
+            <img src="@Url.Action("DownloadPhoto", "Home", new { fileName = @Model.PhotoName })" alt="User Photo" />
+            <p><a asp-controller="Home" asp-action="DownloadPhoto" asp-route-fileName="@Model.PhotoName">@Model.PhotoName</a></p>
         </div>
     </div>
 </body>

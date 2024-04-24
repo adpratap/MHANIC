@@ -32,9 +32,12 @@
                 <p>Mobile Number: @userData.Mobile_No</p>
                 <p>Email ID: @userData.Email_Id</p>
                 <p>Address: @userData.Address</p>
-                <p><img src="@Url.Action("GetPhoto", "Home", new { fileName = @userData.PhotoName })" alt="User Photo" /></p>
+                <p><img src="@Url.Action("DownloadPhoto", "Home", new { fileName = userData.PhotoName })" alt="User Photo" /></p>
                 <p>
-                    <a asp-controller="Home" asp-action="GetPhoto" asp-route-fileName="@userData.PhotoName">Download Photo</a>
+                    <a asp-controller="Home" asp-action="DownloadPhoto" asp-route-fileName="@userData.PhotoName">Download Photo</a>
+                </p>
+                <p>
+                    <a asp-controller="Home" asp-action="Delete" asp-route-phoneNo="@userData.Mobile_No">Delete this</a>
                 </p>
             </div>
         }
