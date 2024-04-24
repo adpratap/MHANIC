@@ -1,0 +1,22 @@
+﻿@model MHANIC.Models.UserData
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Data Details</title>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>User Data Details</h1>
+            <h2>Name: @Model.Name</h2>
+            <h2>Mobile Number: @Model.Mobile_No</h2>
+            <h2>Email ID: @Model.Email_Id</h2>
+            <h2>Address: @Model.Address</h2>
+            <h2>Photo:</h2>
+            <img src="@Url.Action("GetPhoto", "Home", new { fileName = @Model.PhotoName })" alt="User Photo" />
+            <p><a asp-controller="Home" asp-action="GetPhoto" asp-route-fileName="@Model.PhotoName">@Model.PhotoName</a></p>
+        </div>
+    </div>
+</body>
+</html>

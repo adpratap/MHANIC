@@ -1,0 +1,43 @@
+﻿@model IEnumerable<MHANIC.Models.UserData>
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+
+    <a class="btn btn-success" asp-controller="Home" asp-action="Create" role="button">Create New</a>
+  
+    <h1>Search</h1>
+
+    <form method="get" asp-action="Search" asp-controller="Home">
+        <div class="input-group mb-3">
+            <input type="number" class="form-control" placeholder="Enter search term" aria-label="Search term" aria-describedby="button-addon2" name="phone">
+            <button class="btn btn-primary" type="submit" id="button-addon2">Search</button>
+        </div>
+    </form>
+
+
+    <br/>
+  
+</div>
+
+<div class="text-center">
+
+    <div class="grid-container">
+        @foreach (var userData in Model)
+        {
+            <div class="card">
+                <h2>Name: @userData.Name</h2>
+                <p>Mobile Number: @userData.Mobile_No</p>
+                <p>Email ID: @userData.Email_Id</p>
+                <p>Address: @userData.Address</p>
+                <p><img src="@Url.Action("GetPhoto", "Home", new { fileName = @userData.PhotoName })" alt="User Photo" /></p>
+                <p>
+                    <a asp-controller="Home" asp-action="GetPhoto" asp-route-fileName="@userData.PhotoName">Download Photo</a>
+                </p>
+            </div>
+        }
+    </div>
+
+</div>
